@@ -20,7 +20,10 @@ error[E0080]: constant evaluation error
   --> $DIR/const-fn-error.rs:28:19
    |
 28 |     let a : [i32; f(X)];
-   |                   ^^^^ calling non-const fn `<I as std::iter::IntoIterator><std::ops::Range<usize>>::into_iter`
+   |                   ^^^^
+   |                   |
+   |                   calling non-const fn `<I as std::iter::IntoIterator><std::ops::Range<usize>>::into_iter`
+   |                   inside call to f
 
 error: aborting due to 4 previous errors
 

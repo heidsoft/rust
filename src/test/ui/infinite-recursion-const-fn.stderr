@@ -1,8 +1,65 @@
 error[E0080]: constant evaluation error
   --> $DIR/infinite-recursion-const-fn.rs:16:18
    |
+14 | const fn a() -> usize { b() }
+   |                         --- inside call to b
+15 | const fn b() -> usize { a() }
+   |                         ---
+   |                         |
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
+   |                         inside call to a
 16 | const ARR: [i32; a()] = [5; 6]; //~ ERROR constant evaluation error
-   |                  ^^^ reached the configured maximum number of stack frames
+   |                  ^^^
+   |                  |
+   |                  reached the configured maximum number of stack frames
+   |                  inside call to a
 
 error: aborting due to previous error
 
