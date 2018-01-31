@@ -11,16 +11,28 @@ error[E0080]: constant evaluation error
    |                          ^ attempt to subtract with overflow
 
 error[E0080]: constant evaluation error
-  --> $DIR/issue-43197.rs:19:24
+  --> $DIR/issue-43197.rs:19:5
    |
 19 |     const Y: u32 = foo(0-1); //~ ERROR constant evaluation error
-   |                        ^^^ attempt to subtract with overflow
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^ attempt to subtract with overflow
+   |
+note: for constant propagated here
+  --> $DIR/issue-43197.rs:20:26
+   |
+20 |     println!("{} {}", X, Y);
+   |                          ^
 
 error[E0080]: constant evaluation error
-  --> $DIR/issue-43197.rs:18:20
+  --> $DIR/issue-43197.rs:18:5
    |
 18 |     const X: u32 = 0-1; //~ ERROR constant evaluation error
-   |                    ^^^ attempt to subtract with overflow
+   |     ^^^^^^^^^^^^^^^^^^^ attempt to subtract with overflow
+   |
+note: for constant propagated here
+  --> $DIR/issue-43197.rs:20:23
+   |
+20 |     println!("{} {}", X, Y);
+   |                       ^
 
 error: aborting due to 4 previous errors
 
