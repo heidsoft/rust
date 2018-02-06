@@ -17,13 +17,19 @@ error[E0019]: constant function contains unimplemented expression type
    |              ^^^^
 
 error[E0080]: constant evaluation error
-  --> $DIR/const-fn-error.rs:28:19
+  --> $DIR/const-fn-error.rs:18:14
    |
-28 |     let a : [i32; f(X)];
-   |                   ^^^^
-   |                   |
-   |                   calling non-const fn `<I as std::iter::IntoIterator><std::ops::Range<usize>>::into_iter`
-   |                   inside call to f
+18 |     for i in 0..x {
+   |              ^^^^ calling non-const fn `<I as std::iter::IntoIterator><std::ops::Range<usize>>::into_iter`
+...
+29 |     let a : [i32; f(X)];
+   |                   ---- inside call to `f`
+   |
+note: for constant expression here
+  --> $DIR/const-fn-error.rs:29:13
+   |
+29 |     let a : [i32; f(X)];
+   |             ^^^^^^^^^^^
 
 error: aborting due to 4 previous errors
 

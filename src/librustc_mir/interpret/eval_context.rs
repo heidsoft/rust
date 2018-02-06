@@ -1566,7 +1566,7 @@ impl<'a, 'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> EvalContext<'a, 'mir, 'tcx, M
         Ok(())
     }
 
-    pub fn generate_stacktrace(&self, explicit_span: Option<Span>) -> Vec<FrameInfo> {
+    pub fn generate_stacktrace(&self, explicit_span: Option<Span>) -> (Vec<FrameInfo>, Span) {
         let mut last_span = None;
         let mut frames = Vec::new();
         // skip 1 because the last frame is just the environment of the constant
@@ -1590,7 +1590,15 @@ impl<'a, 'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> EvalContext<'a, 'mir, 'tcx, M
             };
             frames.push(FrameInfo { span, location });
         }
-        frames
+        let frame = self.frame();
+        let bb = &frame.mir.basic_blocks()[frame.block];
+        let span = if let Some(stmt) = bb.statements.get(frame.stmt) {
+            stmt.source_info.span
+        } else {
+            bb.terminator().source_info.span
+        };
+        trace!("generate stacktrace: {:#?}, {:?}", frames, explicit_span);
+        (frames, span)
     }
 
     pub fn report(&self, e: &mut EvalError, as_err: bool, explicit_span: Option<Span>) {
@@ -1654,9 +1662,10 @@ impl<'a, 'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> EvalContext<'a, 'mir, 'tcx, M
                     "constant evaluation error",
                 )
             };
+            let (frames, span) = self.generate_stacktrace(explicit_span);
             err.span_label(span, e.to_string());
-            for FrameInfo { span, location } in self.generate_stacktrace(explicit_span) {
-                err.span_note(span, &format!("inside call to {}", location));
+            for FrameInfo { span, location } in frames {
+                err.span_note(span, &format!("inside call to `{}`", location));
             }
             err.emit();
         } else {
