@@ -666,6 +666,9 @@ impl<'a, 'tcx> PatternContext<'a, 'tcx> {
         }
     }
 
+    /// Takes a HIR Path. If the path is a constant, evaluates it and feeds
+    /// it to `const_to_pat`. Any other path (like enum variants without fields)
+    /// is converted to the corresponding pattern via `lower_variant_or_leaf`
     fn lower_path(&mut self,
                   qpath: &hir::QPath,
                   id: hir::HirId,
@@ -721,6 +724,10 @@ impl<'a, 'tcx> PatternContext<'a, 'tcx> {
         }
     }
 
+    /// Converts literals, paths and negation of literals to patterns.
+    /// The special case for negation exists to allow things like -128i8
+    /// which would overflow if we tried to evaluate 128i8 and then negate
+    /// afterwards.
     fn lower_lit(&mut self, expr: &'tcx hir::Expr) -> PatternKind<'tcx> {
         match expr.node {
             hir::ExprLit(ref lit) => {
@@ -766,6 +773,9 @@ impl<'a, 'tcx> PatternContext<'a, 'tcx> {
         }
     }
 
+    /// Converts an evaluated constant to a pattern (if possible).
+    /// This means aggregate values (like structs and enums) are converted
+    /// to a pattern that matches the value (as if you'd compare via eq).
     fn const_to_pat(
         &self,
         instance: ty::Instance<'tcx>,
@@ -843,14 +853,14 @@ impl<'a, 'tcx> PatternContext<'a, 'tcx> {
                     },
                     ConstVal::Unevaluated(..) =>
                         span_bug!(span, "{:#?} is not a valid enum constant", cv),
-                    }
+                }
             },
             ty::TyAdt(adt_def, _) => {
                 let struct_var = adt_def.non_enum_variant();
                 PatternKind::Leaf {
                     subpatterns: adt_subpatterns(struct_var.fields.len(), None),
-                        }
                 }
+            }
             ty::TyTuple(fields, _) => {
                 PatternKind::Leaf {
                     subpatterns: adt_subpatterns(fields.len(), None),
