@@ -32,6 +32,7 @@ use rustc::middle::const_val::ConstVal;
 use rustc::middle::privacy::AccessLevels;
 use rustc::middle::resolve_lifetime as rl;
 use rustc::middle::lang_items;
+use rustc::mir::interpret::GlobalId;
 use rustc::hir::def::{Def, CtorKind};
 use rustc::hir::def_id::{CrateNum, DefId, CRATE_DEF_INDEX, LOCAL_CRATE};
 use rustc::ty::subst::Substs;
@@ -42,7 +43,6 @@ use rustc_typeck::hir_ty_to_ty;
 
 use rustc::hir;
 
-use rustc_const_math::ConstInt;
 use std::default::Default;
 use std::{mem, slice, vec};
 use std::iter::FromIterator;
@@ -2447,23 +2447,17 @@ impl Clean<Type> for hir::Ty {
                 let def_id = cx.tcx.hir.body_owner_def_id(n);
                 let param_env = cx.tcx.param_env(def_id);
                 let substs = Substs::identity_for_item(cx.tcx, def_id);
-                let n = cx.tcx.const_eval(param_env.and((def_id, substs))).unwrap_or_else(|_| {
+                let cid = GlobalId {
+                    instance: ty::Instance::new(def_id, substs),
+                    promoted: None
+                };
+                let n = cx.tcx.const_eval(param_env.and(cid)).unwrap_or_else(|_| {
                     cx.tcx.mk_const(ty::Const {
                         val: ConstVal::Unevaluated(def_id, substs),
                         ty: cx.tcx.types.usize
                     })
                 });
-                let n = if let ConstVal::Integral(ConstInt::Usize(n)) = n.val {
-                    n.to_string()
-                } else if let ConstVal::Unevaluated(def_id, _) = n.val {
-                    if let Some(node_id) = cx.tcx.hir.as_local_node_id(def_id) {
-                        print_const_expr(cx, cx.tcx.hir.body_owned_by(node_id))
-                    } else {
-                        inline::print_inlined_const(cx, def_id)
-                    }
-                } else {
-                    format!("{:?}", n)
-                };
+                let n = print_const(cx, n);
                 Array(box ty.clean(cx), n)
             },
             TyTup(ref tys) => Tuple(tys.clean(cx)),
@@ -2582,21 +2576,15 @@ impl<'tcx> Clean<Type> for Ty<'tcx> {
                 let mut n = cx.tcx.lift(&n).unwrap();
                 if let ConstVal::Unevaluated(def_id, substs) = n.val {
                     let param_env = cx.tcx.param_env(def_id);
-                    if let Ok(new_n) = cx.tcx.const_eval(param_env.and((def_id, substs))) {
+                    let cid = GlobalId {
+                        instance: ty::Instance::new(def_id, substs),
+                        promoted: None
+                    };
+                    if let Ok(new_n) = cx.tcx.const_eval(param_env.and(cid)) {
                         n = new_n;
                     }
                 };
-                let n = if let ConstVal::Integral(ConstInt::Usize(n)) = n.val {
-                    n.to_string()
-                } else if let ConstVal::Unevaluated(def_id, _) = n.val {
-                    if let Some(node_id) = cx.tcx.hir.as_local_node_id(def_id) {
-                        print_const_expr(cx, cx.tcx.hir.body_owned_by(node_id))
-                    } else {
-                        inline::print_inlined_const(cx, def_id)
-                    }
-                } else {
-                    format!("{:?}", n)
-                };
+                let n = print_const(cx, n);
                 Array(box ty.clean(cx), n)
             }
             ty::TyRawPtr(mt) => RawPointer(mt.mutbl.clean(cx), box mt.ty.clean(cx)),
@@ -3498,6 +3486,28 @@ fn name_from_pat(p: &hir::Pat) -> String {
             let mid = mid.as_ref().map(|p| format!("..{}", name_from_pat(&**p))).into_iter();
             let end = end.iter().map(|p| name_from_pat(&**p));
             format!("[{}]", begin.chain(mid).chain(end).collect::<Vec<_>>().join(", "))
+        },
+    }
+}
+
+fn print_const(cx: &DocContext, n: &ty::Const) -> String {
+    match n.val {
+        ConstVal::Unevaluated(def_id, _) => {
+            if let Some(node_id) = cx.tcx.hir.as_local_node_id(def_id) {
+                print_const_expr(cx, cx.tcx.hir.body_owned_by(node_id))
+            } else {
+                inline::print_inlined_const(cx, def_id)
+            }
+        },
+        ConstVal::Value(val) => {
+            let mut s = String::new();
+            ::rustc::mir::print_miri_value(val, n.ty, &mut s).unwrap();
+            // array lengths are obviously usize
+            if s.ends_with("usize") {
+                let n = s.len() - "usize".len();
+                s.truncate(n);
+            }
+            s
         },
     }
 }

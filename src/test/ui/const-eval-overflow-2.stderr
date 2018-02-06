@@ -5,9 +5,9 @@ error[E0080]: constant evaluation error
    |                         ^^^^^^^^ attempt to negate with overflow
    |
 note: for pattern here
-  --> $DIR/const-eval-overflow-2.rs:27:9
+  --> $DIR/const-eval-overflow-2.rs:26:9
    |
-27 |         NEG_NEG_128 => println!("A"),
+26 |         NEG_NEG_128 => println!("A"),
    |         ^^^^^^^^^^^
 
 error: aborting due to previous error
